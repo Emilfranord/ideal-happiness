@@ -48,13 +48,24 @@ module internal StateMonad
     let push : SM<unit> = 
         S (fun s -> Success ((), {s with vars = Map.empty :: s.vars}))
 
-    let pop : SM<unit> = failwith "Not implemented"      
+    let pop : SM<unit> = 
+        S (fun s -> Success ((), {s with vars = List.tail s.vars}))
 
-    let wordLength : SM<int> = failwith "Not implemented"      
+    let wordLength : SM<int> = S (fun s -> Success (List.length s.word, s))
 
-    let characterValue (pos : int) : SM<char> = failwith "Not implemented"      
+    let characterValue (pos : int) : SM<char> =
+        let finder s = 
+            match List.tryItem pos s.word with
+            | Some a -> Success (fst a, s)
+            | None  -> Failure (IndexOutOfBounds pos)
+        S (finder)
 
-    let pointValue (pos : int) : SM<int> = failwith "Not implemented"      
+    let pointValue (pos : int) : SM<int> =
+        let finder s = 
+            match List.tryItem pos s.word with
+            | Some a -> Success (snd a, s)
+            | None  -> Failure (IndexOutOfBounds pos)
+        S (finder)  
 
     let lookup (x : string) : SM<int> = 
         let rec aux =
@@ -70,5 +81,31 @@ module internal StateMonad
               | Some v -> Success (v, s)
               | None   -> Failure (VarNotFound x))
 
-    let declare (var : string) : SM<unit> = failwith "Not implemented"   
-    let update (var : string) (value : int) : SM<unit> = failwith "Not implemented"      
+    let update (var : string) (value : int) : SM<unit> =
+        let rec aux depth lst =
+            match depth, lst with
+            | _, []      -> None
+            | d, m :: ms -> 
+                match Map.tryFind var m with
+                | Some _ -> Some d
+                | None   -> aux (d+1) ms
+
+        S (fun s -> 
+              match aux (0) (s.vars) with
+              | Some index -> Success ((), 
+                                {s with vars =    (s.vars.[..index-1]) 
+                                                @ (s.vars.[index] |> Map.add var value|> List.singleton) 
+                                                @ (s.vars.[index+1..])})
+              | None   -> Failure (VarNotFound var))
+    
+    let declare (var : string) : SM<unit> =
+        let finder state = 
+            let notReserved = Set.contains var state.reserved  |> not
+            let notExists = Map.containsKey var state.vars.Head |> not
+
+            match notReserved, notExists with
+            | true, true -> Success ((), {state with vars = (state.vars.Head |> Map.add var 0) :: state.vars.Tail})
+            | true, false -> Failure (VarExists var)
+            | false, _ -> Failure (ReservedName var)
+        
+        S (finder)  
