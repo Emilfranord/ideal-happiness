@@ -1,0 +1,3 @@
+# Scrabble bot
+
+Whatever, we will make a bot....
