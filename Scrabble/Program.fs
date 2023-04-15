@@ -44,15 +44,21 @@ let main _ =
     let port       = 13001
 
     let dictAPI =
-        // Uncomment if you have implemented a dictionary. last element None if you have not implemented a GADDAG
+        // set dictAPI to None, to use the build-in dict.
+        // otherwise give a touple with the four methods relevant to a dict.
+        // last element None if you have not implemented a GADDAG
         // Some (Dictionary.empty, Dictionary.insert, Dictionary.step, Some Dictionary.reverse) 
-        None
+        Some (Dictionaries.Trie.empty, Dictionaries.Trie.insert, Dictionaries.Trie.step, None)
+
 
     let (dictionary, time) =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
 
+    let players     = [("PaperScissors", dictionary, PaperScissors.Scrabble.startGame); ("OxyphenButazone", dictionary, Oxyphenbutazone.Scrabble.startGame)]
+
+    //let players     = [("PaperScissors",dictionary, PaperScissors.Scrabble.startGame)]
+
     //let players = spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 2
-    let players = spawnMultiples "Rock" dictionary PaperScissors.Scrabble.startGame 1
 
     do ScrabbleServer.Comm.startGame 
         board dictionary handSize timeout tiles seed port players

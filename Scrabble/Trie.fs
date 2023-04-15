@@ -1,10 +1,9 @@
-namespace PaperScissors
+namespace Dictionaries
 
-internal module Dictionary
-    open System.Collections.Generic
+module internal Trie = 
     type Dict = 
-    | Leaf of bool
-    | Node of bool*Map<char, Dict>
+        | Leaf of bool
+        | Node of bool*Map<char, Dict>
 
     let empty () = Leaf false
 
@@ -39,4 +38,4 @@ internal module Dictionary
                         | Leaf b -> Some (b, d)
                         | Node (b,m) -> Some (b, d)
                 | None -> None
-                | Leaf _ -> None      
+        | Leaf _ -> None
