@@ -49,16 +49,15 @@ let main _ =
         // last element None if you have not implemented a GADDAG
         // Some (Dictionary.empty, Dictionary.insert, Dictionary.step, Some Dictionary.reverse) 
         //Some (Dictionaries.Trie.empty, Dictionaries.Trie.insert, Dictionaries.Trie.step, None)
-        Some (Dictionaries.GADDAG.empty, Dictionaries.GADDAG.insert, Dictionaries.GADDAG.step, Some Dictionaries.GADDAG.reverse)
+        //Some (Dictionaries.GADDAG.empty, Dictionaries.GADDAG.insert, Dictionaries.GADDAG.step, Some Dictionaries.GADDAG.reverse)
+        None
 
     let (dictionary, time) =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
-    
-    System.Console.ReadLine () |> ignore
 
-    let players     = [("PaperScissors", dictionary, PaperScissors.Scrabble.startGame); ("OxyphenButazone", dictionary, Oxyphenbutazone.Scrabble.startGame)]
+    //let players     = [("PaperScissors", dictionary, PaperScissors.Scrabble.startGame); ("OxyphenButazone", dictionary, Oxyphenbutazone.Scrabble.startGame)]
 
-    //let players     = [("PaperScissors",dictionary, PaperScissors.Scrabble.startGame)]
+    let players     = [("PaperScissors",dictionary, PaperScissors.Scrabble.startGame)]
 
     //let players = spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 2
 

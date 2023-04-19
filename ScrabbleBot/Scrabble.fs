@@ -46,17 +46,36 @@ module State =
         dict          : ScrabbleUtil.Dictionary.Dict
         playerNumber  : uint32
         hand          : MultiSet.MultiSet<uint32>
+        currentTurn   : int // zero = us, non-zero = not us, under modulo
+        placedTiles   : Map<coord, char> 
     }
 
-    let mkState b d pn h = {board = b; dict = d;  playerNumber = pn; hand = h }
+    let mkState b d pn h c t = {board = b; dict = d;  playerNumber = pn; hand = h; currentTurn = c; placedTiles = t}
 
+    
     let board st         = st.board
     let dict st          = st.dict
     let playerNumber st  = st.playerNumber
     let hand st          = st.hand
+    let currentTurn st   = st.currentTurn
+    let placedTiles st   = st.placedTiles
+
+    let updateState st h c t = {board = board st; dict = dict st;  playerNumber = playerNumber st; hand = h; currentTurn = c; placedTiles = t}
+
 
 module Scrabble =
     open System.Threading
+
+    let updateTiles ms st = 
+        let tilesToUpdate = List.map (fun (coord, (_, (char, _))) -> (coord, char)) ms
+        let tiles' = List.fold (fun state (coord, char) -> Map.add coord char state) (State.placedTiles st) tilesToUpdate
+        tiles'
+
+    let updateHand removeTiles addTiles st = 
+        let tilesToRemove = List.map (fun (_, (x, (_, _))) -> x) removeTiles
+        let hand' = List.fold (fun state element -> MultiSet.removeSingle element state) (State.hand st) tilesToRemove
+        let hand'' = List.fold (fun state (id, amount) -> MultiSet.add id amount state) hand' addTiles
+        hand''
 
     let playGame cstream pieces (st : State.state) =
 
@@ -75,23 +94,40 @@ module Scrabble =
             debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
 
             match msg with
-            | RCM (CMPlaySuccess(ms, points, newPieces)) ->
+            | RCM (CMPlaySuccess(ms, _, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = st // This state needs to be updated
+                
+                let tiles = updateTiles ms st
+                let hand = updateHand ms newPieces st
+
+                let st' = State.updateState st (hand) (State.currentTurn st + 1) tiles
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
-                (* Successful play by other player. Update your state *)
-                let st' = st // This state needs to be updated
+                let tiles = updateTiles ms st
+                let st' =  State.updateState st (State.hand st) (State.currentTurn st + 1) tiles
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
-                let st' = st // This state needs to be updated
+                let st' =  State.updateState st (State.hand st) (State.currentTurn st + 1) (State.placedTiles st)
+                aux st'
+            | RCM (CMPassed (pid)) -> 
+                let st' =  State.updateState st (State.hand st) (State.currentTurn st + 1) (State.placedTiles st)
+                aux st'
+            | RCM (CMForfeit (pid)) -> //TODO handle changing the numPlayers
+                let st' = State.updateState st (State.hand st) (State.currentTurn st + 1) (State.placedTiles st)
+                aux st'
+            | RCM (CMChange (playerId, numberOfTiles)) ->
+                let st' = State.updateState st (State.hand st) (State.currentTurn st + 1) (State.placedTiles st)
+                aux st'
+            | RCM (CMChangeSuccess (lst)) ->
+                let hand = updateHand List.empty lst st
+                let st' = State.updateState st (hand) (State.currentTurn st + 1) (State.placedTiles st)
+                aux st'
+            | RCM (CMTimeout (pid)) -> 
+                let st' = State.updateState st (State.hand st) (State.currentTurn st + 1) (State.placedTiles st)
                 aux st'
             | RCM (CMGameOver _) -> ()
-            | RCM a -> failwith (sprintf "not implmented: %A" a)
             | RGPE err -> printfn "Gameplay Error:\n%A" err; aux st
-
-
         aux st
 
     let startGame 
@@ -118,5 +154,5 @@ module Scrabble =
                   
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet)
+        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet (playerTurn |> int) Map.empty<coord, char>)
         
