@@ -18,7 +18,7 @@ let spawnMultiples name dict bot =
 
 [<EntryPoint>]
 let main _ =
-    ScrabbleUtil.DebugPrint.toggleDebugPrint false // Change to false to supress debug output
+    ScrabbleUtil.DebugPrint.toggleDebugPrint true // Change to false to supress debug output
 
     System.Console.BackgroundColor <- System.ConsoleColor.White
     System.Console.ForegroundColor <- System.ConsoleColor.Black
@@ -48,11 +48,13 @@ let main _ =
         // otherwise give a touple with the four methods relevant to a dict.
         // last element None if you have not implemented a GADDAG
         // Some (Dictionary.empty, Dictionary.insert, Dictionary.step, Some Dictionary.reverse) 
-        Some (Dictionaries.Trie.empty, Dictionaries.Trie.insert, Dictionaries.Trie.step, None)
-
+        //Some (Dictionaries.Trie.empty, Dictionaries.Trie.insert, Dictionaries.Trie.step, None)
+        Some (Dictionaries.GADDAG.empty, Dictionaries.GADDAG.insert, Dictionaries.GADDAG.step, Some Dictionaries.GADDAG.reverse)
 
     let (dictionary, time) =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
+    
+    System.Console.ReadLine () |> ignore
 
     let players     = [("PaperScissors", dictionary, PaperScissors.Scrabble.startGame); ("OxyphenButazone", dictionary, Oxyphenbutazone.Scrabble.startGame)]
 
