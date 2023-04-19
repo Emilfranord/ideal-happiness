@@ -24,6 +24,7 @@ module internal Parser
     let pIsDigit    = pstring "isDigit" <?> "isDigit"
     let pIsLetter   = pstring "isLetter" <?> "isLetter"
     let pIsVowel   = pstring "isVowel" <?> "isVowel"
+    let pIsConsonant = pstring "isConsonant" <?> "isConsonant"
 
     let pif       = pstring "if" <?> "if"
     let pthen     = pstring "then" <?> "then"
@@ -65,9 +66,9 @@ module internal Parser
     let AtomParse, aref = createParserForwardedToRef<aExp>()
     let CharParse, cref = createParserForwardedToRef<cExp>()
 
-    let BoolParseTop, breft = createParserForwardedToRef<bExp>()
-    let BoolParseMid, brefm = createParserForwardedToRef<bExp>()
-    let BoolParseBot, brefb = createParserForwardedToRef<bExp>()
+    let BoolParseLoose, blref = createParserForwardedToRef<bExp>()
+    let BoolParseMed, bmref = createParserForwardedToRef<bExp>()
+    let BoolParseHard, bhref = createParserForwardedToRef<bExp>()
 
     let AddParse = binop (pchar '+') ProdParse TermParse |>> Add <?> "Add"
     let SubParse = binop (pchar '-') ProdParse TermParse |>> Sub <?> "Sub"
@@ -99,7 +100,36 @@ module internal Parser
 
     let CexpParse = CharParse
 
-    let BexpParse = BoolParseTop
+
+    let AndParse = binop (pstring "/\\") BoolParseMed BoolParseLoose |>> Conj <?> "Conj"
+    let OrParse = binop (pstring "\\/") BoolParseMed BoolParseLoose |>> (fun (a, b) -> (Not a, Not b) |> Conj |> Not) <?> "Or"
+
+    do blref := choice [AndParse; OrParse; BoolParseMed]
+
+    let EqualParse = binop (pchar '=') AtomParse AtomParse |>> AEq <?> "Equal"
+    let NotEqual = binop (pstring "<>") AtomParse AtomParse |>> (fun (a, b) -> AEq (a, b) |> Not ) <?> "Equal"
+    let LessThanParse = binop (pchar '<') AtomParse AtomParse |>> ALt <?> "LessThan"
+
+    //let (.<=.) a b = a .<. b .||. ~~(a .<>. b)
+    let LessThanOrEqual = binop (pstring "<=") AtomParse AtomParse |>> (fun (a, b) -> (Not (ALt (a, b)), (AEq (a, b) |> Not) |> Not |> Not) |> Conj |> Not) <?> "LessThanOrEqual"
+
+    // ~~(a .=. b) .&&. (a .>=. b)
+    let MoreThanParse = binop (pchar '>') AtomParse AtomParse |>> (fun (a, b) -> (Not (AEq (a, b)), Not (ALt (a, b))) |> Conj) <?> "MoreThan"
+    let MoreThanOrEqual = binop (pstring ">=" ) AtomParse AtomParse |>> (fun (a, b) -> ALt (a, b) |> Not) <?> "LessThan"
+
+
+    do bmref := choice [EqualParse; NotEqual; LessThanParse; LessThanParse; LessThanOrEqual; MoreThanParse; MoreThanOrEqual; BoolParseHard]
+
+    let BParParse = parenthesise BoolParseLoose
+    let TrueParse = pTrue |>> (fun _ -> TT) <?> "True" 
+    let FalseParse = pFalse |>> (fun _ -> FF) <?> "False" 
+    let NotParse = unop (pchar '~') BoolParseLoose |>> Not <?> "Not" 
+    let IsConsonantParse = unop pIsConsonant (parenthesise CharParse) |>> IsConsonant <?> "IsConsonant"
+    let IsVowelParse = unop pIsVowel (parenthesise CharParse) |>> IsVowel <?> "IsVowel"
+
+    do bhref := choice [TrueParse; FalseParse; NotParse; IsConsonantParse; IsVowelParse; BParParse]
+
+    let BexpParse = BoolParseLoose
 
     let stmntParse = pstring "not implemented"
 
