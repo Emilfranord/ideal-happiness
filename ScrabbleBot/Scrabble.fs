@@ -45,12 +45,13 @@ module State =
         board         : Parser.board
         dict          : ScrabbleUtil.Dictionary.Dict
         playerNumber  : uint32
+        tileConverter : Map<uint32, tile>
         hand          : MultiSet.MultiSet<uint32>
         currentTurn   : int // zero = us, non-zero = not us, under modulo
         placedTiles   : Map<coord, char> 
     }
 
-    let mkState b d pn h c t = {board = b; dict = d;  playerNumber = pn; hand = h; currentTurn = c; placedTiles = t}
+    let mkState b d pn til h c t = {board = b; dict = d;  playerNumber = pn; tileConverter = til; hand = h; currentTurn = c; placedTiles = t}
 
     
     let board st         = st.board
@@ -59,8 +60,9 @@ module State =
     let hand st          = st.hand
     let currentTurn st   = st.currentTurn
     let placedTiles st   = st.placedTiles
+    let tileConverter st = st.tileConverter
 
-    let updateState st h c t = {board = board st; dict = dict st;  playerNumber = playerNumber st; hand = h; currentTurn = c; placedTiles = t}
+    let updateState st h c t = {board = board st; dict = dict st;  playerNumber = playerNumber st; tileConverter = tileConverter st ; hand = h; currentTurn = c; placedTiles = t}
 
 
 module Scrabble =
@@ -154,5 +156,5 @@ module Scrabble =
                   
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet (playerTurn |> int) Map.empty<coord, char>)
+        fun () -> playGame cstream tiles (State.mkState board dict playerNumber tiles handSet (playerTurn |> int) Map.empty<coord, char>)
         
