@@ -65,6 +65,12 @@ module State =
     let updateState st h c t = {board = board st; dict = dict st;  playerNumber = playerNumber st; tileConverter = tileConverter st ; hand = h; currentTurn = c; placedTiles = t}
 
 
+module internal Action = 
+    (*This function decides what ServerMessage to send, and what parameters it should pass*)
+    let action (st : State.state) = 
+        SMPass 
+
+
 module Scrabble =
     open System.Threading
 
@@ -85,15 +91,16 @@ module Scrabble =
             Print.printHand pieces (State.hand st)
 
             // remove the force print when you move on from manual input (or when you have learnt the format)
-            forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
-            let input =  System.Console.ReadLine()
-            let move = RegEx.parseMove input
+            //forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
+            //let input =  System.Console.ReadLine()
+            //let move = RegEx.parseMove input
 
-            debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
-            send cstream (SMPlay move)
+            //debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+            //send cstream (SMPlay move)
 
+            send cstream (Action.action st)
             let msg = recv cstream
-            debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+            //debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
 
             match msg with
             | RCM (CMPlaySuccess(ms, _, newPieces)) ->
