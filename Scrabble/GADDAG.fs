@@ -29,11 +29,11 @@ module internal GADDAG =
     let insert (s: string) (d: Dict) = 
         let sequenceBuilder (str: string) (index: int) = 
             let prefix  = List.map Character (Seq.toList (str.[..index]))
-            let postfix = List.map Character (Seq.toList (str.[index..]))
+            let postfix = List.map Character (Seq.toList (str.[(index+1)..]))
             (List.rev prefix) @ ([Blank]) @ postfix
 
         let list = List.mapi (fun index _ -> sequenceBuilder s index) (Seq.toList s)
-
+        
         List.fold (fun state element -> insertSingle element state) d list
 
     let step (ch: char) (d: Dict) = 

@@ -157,8 +157,8 @@ module Scrabble =
                       hand =  %A
                       timeout = %A\n\n" numPlayers playerNumber playerTurn hand timeout)
 
-        //let dict = dictf true // true if using a gaddag for your dictionary
-        let dict = dictf false // false if using a trie for your dictionary
+        let dict = dictf true // true if using a gaddag for your dictionary
+        //let dict = dictf false // false if using a trie for your dictionary
         let board = Parser.mkBoard boardP
                   
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand

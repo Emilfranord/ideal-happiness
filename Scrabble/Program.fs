@@ -16,6 +16,8 @@ let spawnMultiples name dict bot =
    
     aux >> List.rev
 
+
+
 [<EntryPoint>]
 let main _ =
     ScrabbleUtil.DebugPrint.toggleDebugPrint true // Change to false to supress debug output
@@ -36,6 +38,7 @@ let main _ =
 //    let board      = ScrabbleUtil.InfiniteHoleBoard.infiniteHoleBoard ()
 
     let words     = readLines "./Scrabble/Dictionaries/English.txt"
+    
 
     let handSize   = 7u
     let timeout    = None
@@ -44,13 +47,13 @@ let main _ =
     let port       = 13001
 
     let dictAPI =
-        // set dictAPI to None, to use the build-in dict.
+        (*set dictAPI to None, to use the build-in dict.
         // otherwise give a touple with the four methods relevant to a dict.
-        // last element None if you have not implemented a GADDAG
+        // last element None if you have not implemented a GADDAG *)
         // Some (Dictionary.empty, Dictionary.insert, Dictionary.step, Some Dictionary.reverse) 
         //Some (Dictionaries.Trie.empty, Dictionaries.Trie.insert, Dictionaries.Trie.step, None)
-        //Some (Dictionaries.GADDAG.empty, Dictionaries.GADDAG.insert, Dictionaries.GADDAG.step, Some Dictionaries.GADDAG.reverse)
-        None
+        Some (Dictionaries.GADDAG.empty, Dictionaries.GADDAG.insert, Dictionaries.GADDAG.step, Some Dictionaries.GADDAG.reverse)
+        //None
 
     let (dictionary, time) =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
