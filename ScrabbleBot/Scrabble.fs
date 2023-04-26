@@ -65,9 +65,47 @@ module State =
     let updateState st h c t = {board = board st; dict = dict st;  playerNumber = playerNumber st; tileConverter = tileConverter st ; hand = h; currentTurn = c; placedTiles = t}
 
 
+
 module internal Action = 
     (*This function decides what ServerMessage to send, and what parameters it should pass*)
+
+    let rec moveChars (st : State.state) (word: List<char>) (hand: List<char>) (dict: Dictionary.Dict) = 
+
+        let w y newDict = moveChars st (List.append word (List.singleton y)) (List.removeAt (List.findIndex (fun x -> y = x) hand) hand) newDict
+
+        let handleStep y = 
+            let stepResult = Dictionary.step y dict
+            debugPrint (sprintf "%A %A %A \n" stepResult word y)
+            match stepResult with 
+            | None -> List.Empty
+            | Some (true, _) -> (List.append word (List.singleton y))
+            | Some (false, newDict) -> moveChars st (List.append word (List.singleton y)) (List.removeAt (List.findIndex (fun x -> y = x) hand) hand) newDict
+
+        let a = List.map (fun y -> handleStep y) hand
+        debugPrint (sprintf "%A, %A \n" a (List.head a))
+        List.head a
+        
+        
+
+    let move (st : State.state) (word: List<char>) (hand: MultiSet.MultiSet<uint32>) (dict: Dictionary.Dict) =
+        let handToChar = MultiSet.map (fun x -> Map.find x (State.tileConverter st)) hand 
+                        |> MultiSet.toList 
+                        |> List.map Set.toList
+                        |> List.collect id
+                        |> List.map (fun (ch, _) -> ch)
+        moveChars st word handToChar dict
+
+    let firstMove (st : State.state) =
+        move st List.Empty (State.hand st) (State.dict st)
+
     let action (st : State.state) = 
+        debugPrint (sprintf "%A, test" (moveChars st [] ['L'; 'O';'K'; 'C';'Z'] (State.dict st)))
+        
+        System.Console.ReadLine() |> ignore
+
+        let w = match Map.isEmpty (State.placedTiles st ) with
+            |true -> firstMove st 
+            |false -> firstMove st
         SMPass 
 
 
