@@ -71,8 +71,39 @@ module State =
 module internal Action = 
     (*This function decides what ServerMessage to send, and what parameters it should pass*)
 
+    let stepChar (ch:char) dict = 
+        let res = Dictionary.step ch dict
+        match res with
+        | None -> None
+        | Some (true, dic) -> Some(true, dic, ch)
+        | Some (false, dic) ->  Some(false, dic, ch)
+        
+
+    (*http://www.fssnip.net/1T/title/Remove-first-ocurrence-from-list*)
+    let rec remove_first pred lst =
+        match lst with
+        | h::t when pred h -> t
+        | h::t -> h::remove_first pred t
+        | _ -> []
+
+    let rec listWords (prefixWord: string) prefixDict (hand: list<char>)  = 
+        let paths = (List.map (fun tile -> stepChar tile prefixDict) hand) |> List.choose id
+        
+        let finishedPaths = List.filter (fun (wordDone,_ ,_) -> wordDone = true) paths 
+                            |> List.map (fun (_,_,x) -> prefixWord + (string x))
+
+        let newHand ch originalHand = 
+            remove_first (fun x -> x=ch) originalHand
+
+        let recurisvePaths = List.map ( fun (_, newDict, ch) -> listWords (prefixWord + (string ch)) newDict (newHand ch hand)) paths
+
+        finishedPaths @ (List.collect id recurisvePaths)
+
     let action (st : State.state) = 
-        SMPass 
+        debugPrint (sprintf "%A\n" (listWords "" (State.dict st) ['F'; 'O'; 'X']))
+        debugPrint (sprintf "%A\n" (listWords "" (State.dict st) ['O'; 'O'; 'C'; 'L']))
+        failwith "here"
+        SMPass
 
 
 module Scrabble =
