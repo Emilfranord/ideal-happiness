@@ -71,6 +71,13 @@ module State =
 module internal Action = 
     (*This function decides what ServerMessage to send, and what parameters it should pass*)
 
+    let rec dictFromPrefix prefix dict = 
+        match prefix with
+        | head::tail -> match Dictionary.step head dict with
+                        | None -> dict
+                        | Some (_,b) ->  dictFromPrefix tail b 
+        | [] -> dict
+
     let stepChar (ch:char) dict = 
         let res = Dictionary.step ch dict
         match res with
@@ -99,9 +106,13 @@ module internal Action =
 
         finishedPaths @ (List.collect id recurisvePaths)
 
+    let listWordsGivenPrefix st (prefixWord: string) (hand: list<char>) = 
+        listWords prefixWord (dictFromPrefix (Seq.toList prefixWord) (State.dict st)) hand
+
     let action (st : State.state) = 
         debugPrint (sprintf "%A\n" (listWords "" (State.dict st) ['F'; 'O'; 'X']))
         debugPrint (sprintf "%A\n" (listWords "" (State.dict st) ['O'; 'O'; 'C'; 'L']))
+        debugPrint (sprintf "%A\n" (listWordsGivenPrefix st "C" ['O'; 'O'; 'L']))
         failwith "here"
         SMPass
 
