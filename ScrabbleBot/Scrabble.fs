@@ -45,15 +45,16 @@ module State =
         board         : Parser.board
         dict          : ScrabbleUtil.Dictionary.Dict
         playerNumber  : uint32
+        totalPlayers  : uint32
         tileConverter : Map<uint32, tile>
         hand          : MultiSet.MultiSet<uint32>
-        currentTurn   : int // zero = us, non-zero = not us, under modulo
+        currentTurn   : int
         placedTiles   : Map<coord, char> 
     }
 
-    let mkState b d pn til h c t = {board = b; dict = d;  playerNumber = pn; tileConverter = til; hand = h; currentTurn = c; placedTiles = t}
+    let mkState b d pn tot til h c t = 
+        {board = b; dict = d;  playerNumber = pn; totalPlayers = tot; tileConverter = til; hand = h; currentTurn = c; placedTiles = t}
 
-    
     let board st         = st.board
     let dict st          = st.dict
     let playerNumber st  = st.playerNumber
@@ -62,8 +63,9 @@ module State =
     let placedTiles st   = st.placedTiles
     let tileConverter st = st.tileConverter
 
-    let updateState st h c t = {board = board st; dict = dict st;  playerNumber = playerNumber st; tileConverter = tileConverter st ; hand = h; currentTurn = c; placedTiles = t}
-
+    let totalPlayers st = st.totalPlayers
+    let updateState st h c t = 
+        {board = board st; dict = dict st; playerNumber = playerNumber st; totalPlayers = totalPlayers st; tileConverter = tileConverter st ; hand = h; currentTurn = c; placedTiles = t}
 
 
 module internal Action = 
@@ -86,6 +88,12 @@ module Scrabble =
         let hand' = List.fold (fun state element -> MultiSet.removeSingle element state) (State.hand st) tilesToRemove
         let hand'' = List.fold (fun state (id, amount) -> MultiSet.add id amount state) hand' addTiles
         hand''
+
+    let increasePlayerTurn st =
+        (State.currentTurn st + 1) % (State.totalPlayers st |> int)
+    
+    let isOurTurn st =
+        State.currentTurn st = (State.playerNumber st |> int)
 
     let playGame cstream pieces (st : State.state) =
 
@@ -111,31 +119,32 @@ module Scrabble =
                 let tiles = updateTiles ms st
                 let hand = updateHand ms newPieces st
 
-                let st' = State.updateState st (hand) (State.currentTurn st + 1) tiles
+                let st' = State.updateState st hand (increasePlayerTurn st) tiles
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 let tiles = updateTiles ms st
-                let st' =  State.updateState st (State.hand st) (State.currentTurn st + 1) tiles
+                let st' =  State.updateState st (State.hand st) (increasePlayerTurn st) tiles
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
-                let st' =  State.updateState st (State.hand st) (State.currentTurn st + 1) (State.placedTiles st)
+                let st' =  State.updateState st (State.hand st) (increasePlayerTurn st) (State.placedTiles st)
                 aux st'
             | RCM (CMPassed (pid)) -> 
-                let st' =  State.updateState st (State.hand st) (State.currentTurn st + 1) (State.placedTiles st)
+                let st' =  State.updateState st (State.hand st) (increasePlayerTurn st) (State.placedTiles st)
                 aux st'
-            | RCM (CMForfeit (pid)) -> //TODO handle changing the numPlayers
-                let st' = State.updateState st (State.hand st) (State.currentTurn st + 1) (State.placedTiles st)
-                aux st'
+            | RCM (CMForfeit (pid)) ->
+                let st' = State.mkState (State.board st) (State.dict st) (State.playerNumber st) (State.totalPlayers st) (State.tileConverter st) (State.hand st) (State.currentTurn st) (State.placedTiles st)
+                let st'' = State.updateState st' (State.hand st') (increasePlayerTurn st') (State.placedTiles st')
+                aux st''
             | RCM (CMChange (playerId, numberOfTiles)) ->
-                let st' = State.updateState st (State.hand st) (State.currentTurn st + 1) (State.placedTiles st)
+                let st' = State.updateState st (State.hand st) (increasePlayerTurn st) (State.placedTiles st)
                 aux st'
             | RCM (CMChangeSuccess (lst)) ->
                 let hand = updateHand List.empty lst st
-                let st' = State.updateState st (hand) (State.currentTurn st + 1) (State.placedTiles st)
+                let st' = State.updateState st (hand) (increasePlayerTurn st) (State.placedTiles st)
                 aux st'
             | RCM (CMTimeout (pid)) -> 
-                let st' = State.updateState st (State.hand st) (State.currentTurn st + 1) (State.placedTiles st)
+                let st' = State.updateState st (State.hand st) (increasePlayerTurn st) (State.placedTiles st)
                 aux st'
             | RCM (CMGameOver _) -> ()
             | RGPE err -> printfn "Gameplay Error:\n%A" err; aux st
@@ -159,11 +168,11 @@ module Scrabble =
                       hand =  %A
                       timeout = %A\n\n" numPlayers playerNumber playerTurn hand timeout)
 
-        let dict = dictf true // true if using a gaddag for your dictionary
-        //let dict = dictf false // false if using a trie for your dictionary
+        let dict = dictf true // true if using a gaddag for dictionary
+        //let dict = dictf false // false if using a trie for dictionary
         let board = Parser.mkBoard boardP
                   
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber tiles handSet (playerTurn |> int) Map.empty<coord, char>)
+        fun () -> playGame cstream tiles (State.mkState board dict playerNumber numPlayers tiles handSet (playerTurn |> int) Map.empty<coord, char>)
         
