@@ -69,14 +69,11 @@ module State =
 
 
 module internal Action = 
-    (*This function decides what ServerMessage to send, and what parameters it should pass*)
+    let stringToTiles str = 
+        ()
 
-    let rec dictFromPrefix prefix dict = 
-        match prefix with
-        | head::tail -> match Dictionary.step head dict with
-                        | None -> dict
-                        | Some (_,b) ->  dictFromPrefix tail b 
-        | [] -> dict
+    let tilesToStringSingletons (tiles: list<tile>) = 
+       tiles |> List.map (fun ti -> Set.minElement ti) |> List.map (fun (ch, point) -> ch) |> string
 
     let stepChar (ch:char) dict = 
         let res = Dictionary.step ch dict
@@ -107,15 +104,22 @@ module internal Action =
         finishedPaths @ (List.collect id recurisvePaths)
 
     let listWordsGivenPrefix st (prefixWord: string) (hand: list<char>) = 
+        let rec dictFromPrefix prefix dict = 
+            match prefix with
+            | head::tail -> match Dictionary.step head dict with
+                            | None -> dict
+                            | Some (_,b) ->  dictFromPrefix tail b 
+            | [] -> dict
+        
         listWords prefixWord (dictFromPrefix (Seq.toList prefixWord) (State.dict st)) hand
 
     let action (st : State.state) = 
         debugPrint (sprintf "%A\n" (listWords "" (State.dict st) ['F'; 'O'; 'X']))
         debugPrint (sprintf "%A\n" (listWords "" (State.dict st) ['O'; 'O'; 'C'; 'L']))
         debugPrint (sprintf "%A\n" (listWordsGivenPrefix st "C" ['O'; 'O'; 'L']))
+        debugPrint (sprintf "%A\n" (State.tileConverter st))
         failwith "here"
         SMPass
-
 
 module Scrabble =
     open System.Threading
