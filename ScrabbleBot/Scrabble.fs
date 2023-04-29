@@ -117,19 +117,7 @@ module internal Action =
 
         listWords st (prefixWord |> prefixToTiles) (dictFromPrefix (prefixWord) (State.dict st)) hand
 
-
-    let debugTilesToStr (tiles: list<uint32 * (char * int)>) = 
-        List.map (fun (_, (ch, _)) -> ch) tiles |> List.map string |> List.reduce (+)
-
     let action (st : State.state) = 
-
-        debugPrint (sprintf "%A\n" (listWords st List.empty (State.dict st) [6u; 15u; 24u] |> List.map (fun x-> debugTilesToStr x)))
-        debugPrint (sprintf "%A\n" (listWords st List.empty (State.dict st) [15u; 15u; 3u; 12u] |> List.map (fun x-> debugTilesToStr x)))
-        debugPrint (sprintf "%A\n" (listWords st List.empty (State.dict st) [6u;15u;24u;20u;18u; 15u;20u] |> List.map (fun x-> debugTilesToStr x)))
-
-        debugPrint (sprintf "%A\n" (listWordsGivenPrefix st ("C" |> Seq.toList) [15u; 15u; 12u] |> List.map (fun x-> debugTilesToStr x))) 
-
-        failwith "here"
         SMPass
 
 module Scrabble =
