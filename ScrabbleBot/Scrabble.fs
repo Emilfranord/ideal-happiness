@@ -116,9 +116,44 @@ module internal Action =
         
         listWords st (prefixWord |> prefixToTiles) (dictFromPrefix (prefixWord) (State.dict st)) hand
 
+    let selector (options: list<list<uint32 * (char * int)>>) =
+        (List.map (fun x -> List.fold (fun acc (_, (_, point)) -> acc+point) 0 x ) options, options) 
+        ||> List.map2 (fun points lst -> (points, lst))
+        |> List.sortByDescending (fun (points, _) -> points)
+        |> List.map (fun (_, lst) -> lst)
+        |> List.head
+
+
+    type Direction = Right | Down
+
+    let increaseCoord amount coord dir  = 
+        match dir with
+        | Right -> ((coord |> fst)+amount, coord |> snd)
+        | Down ->  (coord |> fst, (coord |> snd)+amount)
+
+    let addCoords origin tiles dir = 
+        List.mapi (fun iteratror item  -> (increaseCoord iteratror origin dir, item)) tiles
+
+
+    let startHooks st = 
+        let coordStartsWord st coord =
+            let tileRight = Map.tryFind (increaseCoord -1 coord Right) (State.placedTiles st)
+            let tileDown = Map.tryFind (increaseCoord -1 coord Down) (State.placedTiles st)
+            
+            match (tileRight, tileDown) with
+            | (None, None) -> [Right; Down]
+            | (_, None) -> [Down] 
+            | (None,  _) -> [Right]
+            | (_,  _) -> []
+
+        State.placedTiles st
+            |> Map.map (fun key _ -> coordStartsWord st key) 
+            |> Map.filter (fun _ value -> not (List.isEmpty value) )
+        
+
     let action (st : State.state) = 
-        //TODO: Scan the board, and find spots and directions to start from.
         //TODO: make function that takes a start coordinate and a direction, and produces a (coord x tile) list
+        //REMARK: We only need to place new tiles. So if ROCK is on the table, and we want to upgrade it to ROCKET, we only place ET.
         //TODO: make action use wordfinder, and board scanning
         
         SMPass
