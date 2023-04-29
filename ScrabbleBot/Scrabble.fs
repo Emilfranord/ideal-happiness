@@ -69,18 +69,13 @@ module State =
 
 
 module internal Action = 
-    let stringToTiles str = 
-        ()
-
-    let tilesToStringSingletons (tiles: list<tile>) = 
-       tiles |> List.map (fun ti -> Set.minElement ti) |> List.map (fun (ch, point) -> ch) |> string
-
-    let stepChar (ch:char) dict = 
+    let stepChar (tile:(uint32 * (char * int))) dict =
+        let ch = tile  |> snd |> fst
         let res = Dictionary.step ch dict
         match res with
         | None -> None
-        | Some (true, dic) -> Some(true, dic, ch)
-        | Some (false, dic) ->  Some(false, dic, ch)
+        | Some (true, dic) -> Some(true, dic, tile)
+        | Some (false, dic) ->  Some(false, dic, tile)
         
 
     (*http://www.fssnip.net/1T/title/Remove-first-ocurrence-from-list*)
@@ -90,20 +85,26 @@ module internal Action =
         | h::t -> h::remove_first pred t
         | _ -> []
 
-    let rec listWords (prefixWord: string) prefixDict (hand: list<char>)  = 
-        let paths = (List.map (fun tile -> stepChar tile prefixDict) hand) |> List.choose id
+    let rec listWords st (prefixWord: list<(uint32 * (char * int))>) prefixDict (hand: list<uint32>)  =
+
+        let hand' = List.map (fun identifier -> ( identifier, Map.find identifier (State.tileConverter st))) hand 
+                    |> List.map (fun (identifier, tile) -> (Set.map (fun (ch, po) -> (identifier, (ch, po))) tile) |> Set.toList)
+                    |> List.collect id
         
+
+        let paths = (List.map (fun tile -> stepChar tile prefixDict) hand') |> List.choose id
+
         let finishedPaths = List.filter (fun (wordDone,_ ,_) -> wordDone = true) paths 
-                            |> List.map (fun (_,_,x) -> prefixWord + (string x))
+                            |> List.map (fun (_,_,(tile)) -> prefixWord @ (List.singleton tile))
 
         let newHand ch originalHand = 
             remove_first (fun x -> x=ch) originalHand
 
-        let recurisvePaths = List.map ( fun (_, newDict, ch) -> listWords (prefixWord + (string ch)) newDict (newHand ch hand)) paths
+        let recurisvePaths = List.map ( fun (_, newDict, ch) -> listWords st (prefixWord @ (List.singleton ch)) newDict (newHand (fst ch) hand)) paths
 
         finishedPaths @ (List.collect id recurisvePaths)
 
-    let listWordsGivenPrefix st (prefixWord: string) (hand: list<char>) = 
+    let listWordsGivenPrefix st (prefixWord: list<char>) (hand: list<uint32>) = 
         let rec dictFromPrefix prefix dict = 
             match prefix with
             | head::tail -> match Dictionary.step head dict with
@@ -111,13 +112,23 @@ module internal Action =
                             | Some (_,b) ->  dictFromPrefix tail b 
             | [] -> dict
         
-        listWords prefixWord (dictFromPrefix (Seq.toList prefixWord) (State.dict st)) hand
+        let prefixToTiles prefix =
+            List.map (fun ch -> (0u, (ch, 0))) prefix
+
+        listWords st (prefixWord |> prefixToTiles) (dictFromPrefix (prefixWord) (State.dict st)) hand
+
+
+    let debugTilesToStr (tiles: list<uint32 * (char * int)>) = 
+        List.map (fun (_, (ch, _)) -> ch) tiles |> List.map string |> List.reduce (+)
 
     let action (st : State.state) = 
-        debugPrint (sprintf "%A\n" (listWords "" (State.dict st) ['F'; 'O'; 'X']))
-        debugPrint (sprintf "%A\n" (listWords "" (State.dict st) ['O'; 'O'; 'C'; 'L']))
-        debugPrint (sprintf "%A\n" (listWordsGivenPrefix st "C" ['O'; 'O'; 'L']))
-        debugPrint (sprintf "%A\n" (State.tileConverter st))
+
+        debugPrint (sprintf "%A\n" (listWords st List.empty (State.dict st) [6u; 15u; 24u] |> List.map (fun x-> debugTilesToStr x)))
+        debugPrint (sprintf "%A\n" (listWords st List.empty (State.dict st) [15u; 15u; 3u; 12u] |> List.map (fun x-> debugTilesToStr x)))
+        debugPrint (sprintf "%A\n" (listWords st List.empty (State.dict st) [6u;15u;24u;20u;18u; 15u;20u] |> List.map (fun x-> debugTilesToStr x)))
+
+        debugPrint (sprintf "%A\n" (listWordsGivenPrefix st ("C" |> Seq.toList) [15u; 15u; 12u] |> List.map (fun x-> debugTilesToStr x))) 
+
         failwith "here"
         SMPass
 
