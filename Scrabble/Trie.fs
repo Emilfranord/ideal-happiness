@@ -31,7 +31,7 @@ module internal Trie =
 
     let step (c:char) (d:Dict) =
         match d with
-        | Node (b, m) ->
+        | Node (_, m) ->
             match Map.tryFind c m with
                 | Some d -> 
                     match d with

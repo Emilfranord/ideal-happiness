@@ -90,7 +90,6 @@ module internal Action =
         let hand' = List.map (fun identifier -> ( identifier, Map.find identifier (State.tileConverter st))) hand 
                     |> List.map (fun (identifier, tile) -> (Set.map (fun (ch, po) -> (identifier, (ch, po))) tile) |> Set.toList)
                     |> List.collect id
-        
 
         let paths = (List.map (fun tile -> stepChar tile prefixDict) hand') |> List.choose id
 
@@ -114,10 +113,14 @@ module internal Action =
         
         let prefixToTiles prefix =
             List.map (fun ch -> (0u, (ch, 0))) prefix
-
+        
         listWords st (prefixWord |> prefixToTiles) (dictFromPrefix (prefixWord) (State.dict st)) hand
 
     let action (st : State.state) = 
+        //TODO: Scan the board, and find spots and directions to start from.
+        //TODO: make function that takes a start coordinate and a direction, and produces a (coord x tile) list
+        //TODO: make action use wordfinder, and board scanning
+        
         SMPass
 
 module Scrabble =

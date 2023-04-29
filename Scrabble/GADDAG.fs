@@ -32,25 +32,28 @@ module internal GADDAG =
             let postfix = List.map Character (Seq.toList (str.[(index+1)..]))
             (List.rev prefix) @ ([Blank]) @ postfix
 
-        let list = List.mapi (fun index _ -> sequenceBuilder s index) (Seq.toList s)
-        
+        let word = List.map Character (Seq.toList (s))
+
+        let list = List.mapi (fun index _ -> sequenceBuilder s index) (Seq.toList s) @ List.singleton word
+
         List.fold (fun state element -> insertSingle element state) d list
 
-    let step (ch: char) (d: Dict) = 
-        let s = 
+    let step (ch: char) (dict: Dict) = 
+        let symbol = 
             match ch with
-            | '#' -> Blank
-            | _ ->  Character ch
+            | '0' -> Blank
+            | a -> Character a
 
-        match d with
+        match dict with
         | Node (_, m) ->
-            match Map.tryFind s m with
-                | Some d -> 
-                    match d with
-                        | Leaf b -> Some (b, d)
-                        | Node (b,m) -> Some (b, d)
+            match Map.tryFind symbol m with
+                | Some dict' -> 
+                    match dict' with
+                        | Leaf b -> Some (b, dict')
+                        | Node (b,_) -> Some (b, dict')
                 | None -> None
         | Leaf _ -> None
 
+
     let reverse (d: Dict) = 
-        step '#' d
+        step '0' d

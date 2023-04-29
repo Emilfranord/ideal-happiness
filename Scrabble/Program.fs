@@ -51,10 +51,11 @@ let main _ =
         // otherwise give a touple with the four methods relevant to a dict.
         // last element None if you have not implemented a GADDAG *)
         // Some (Dictionary.empty, Dictionary.insert, Dictionary.step, Some Dictionary.reverse) 
-        Some (Dictionaries.Trie.empty, Dictionaries.Trie.insert, Dictionaries.Trie.step, None)
-        //Some (Dictionaries.GADDAG.empty, Dictionaries.GADDAG.insert, Dictionaries.GADDAG.step, Some Dictionaries.GADDAG.reverse)
+        //Some (Dictionaries.Trie.empty, Dictionaries.Trie.insert, Dictionaries.Trie.step, None)
+        Some (Dictionaries.GADDAG.empty, Dictionaries.GADDAG.insert, Dictionaries.GADDAG.step, Some Dictionaries.GADDAG.reverse)
         //None
 
+   
     let (dictionary, time) =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
 
