@@ -77,9 +77,9 @@ module internal Action =
         | Some (true, dic) -> Some(true, dic, tile)
         | Some (false, dic) ->  Some(false, dic, tile)
         
-    let rec listWords st (prefixWord: list<(uint32 * (char * int))>) prefixDict (hand: list<uint32>)  =
-
-        let hand' = List.map (fun identifier -> ( identifier, Map.find identifier (State.tileConverter st))) hand 
+    let rec listWords st (prefixWord: list<(uint32 * (char * int))>) prefixDict (hand: MultiSet.MultiSet<uint32>) =
+        let hand' = MultiSet.toList hand
+                    |> List.map (fun identifier -> ( identifier, Map.find identifier (State.tileConverter st)))  
                     |> List.map (fun (identifier, tile) -> (Set.map (fun (ch, po) -> (identifier, (ch, po))) tile) |> Set.toList)
                     |> List.collect id
 
@@ -88,14 +88,11 @@ module internal Action =
         let finishedPaths = List.filter (fun (wordDone,_ ,_) -> wordDone = true) paths 
                             |> List.map (fun (_,_,(tile)) -> prefixWord @ (List.singleton tile))
 
-        let newHand identifier originalHand = 
-            List.filter (fun x -> not( x = identifier)) originalHand
-
-        let recurisvePaths = List.map ( fun (_, newDict, tile) -> listWords st (prefixWord @ (List.singleton tile)) newDict (newHand (fst tile) hand)) paths
+        let recurisvePaths = List.map ( fun (_, newDict, tile) -> listWords st (prefixWord @ (List.singleton tile)) newDict (MultiSet.removeSingle (fst tile) hand)) paths
 
         finishedPaths @ (List.collect id recurisvePaths)
 
-    let listWordsGivenPrefix st (prefixWord: list<char>) (hand: list<uint32>) = 
+    let listWordsGivenPrefix st (prefixWord: list<char>) (hand: MultiSet.MultiSet<uint32>) = 
         let rec dictFromPrefix prefix dict = 
             match prefix with
             | head::tail -> match Dictionary.step head dict with
