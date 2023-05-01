@@ -20,7 +20,7 @@ let spawnMultiples name dict bot =
 
 [<EntryPoint>]
 let main _ =
-    ScrabbleUtil.DebugPrint.toggleDebugPrint true // Change to false to supress debug output
+    ScrabbleUtil.DebugPrint.toggleDebugPrint false // Change to false to supress debug output
 
     System.Console.BackgroundColor <- System.ConsoleColor.White
     System.Console.ForegroundColor <- System.ConsoleColor.Black
@@ -59,11 +59,10 @@ let main _ =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
 
     let players     = [ ("PaperScissors", dictionary, PaperScissors.Scrabble.startGame);
+                        ("RockPaper", dictionary, PaperScissors.Scrabble.startGame);
                         ("OxyphenButazone", dictionary, Oxyphenbutazone.Scrabble.startGame);
-                        ("OxyphenButazone Part II", dictionary, Oxyphenbutazone.Scrabble.startGame)
+                        ("OxyphenButazone, the Second", dictionary, Oxyphenbutazone.Scrabble.startGame)
                         ]
-
-    //let players     = [("PaperScissors",dictionary, PaperScissors.Scrabble.startGame)]
 
     do ScrabbleServer.Comm.startGame 
         board dictionary handSize timeout tiles seed port players

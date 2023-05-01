@@ -1,0 +1,13 @@
+Multi-player and dictionary: 
+    Yes. 
+    We have made our own Trie and GADDAG. The reverse feature of the GADDAG is unused. 
+    The program supports Multi-player, with several bots.
+
+Playing on all boards: 
+    No
+
+Parallelism: 
+    No
+
+Respect the timeout flag: 
+    No
