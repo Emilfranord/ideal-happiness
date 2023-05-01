@@ -254,22 +254,20 @@ module Scrabble =
         (State.currentTurn st + 1) % (State.totalPlayers st |> int)
     
     let isOurTurn st =
-        State.currentTurn st = (State.playerNumber st |> int)
+        State.currentTurn st = (State.playerNumber st |> int) % (State.totalPlayers st |> int)
+    
 
     let playGame cstream pieces (st : State.state) =
 
         let rec aux (st : State.state) =
             Print.printHand pieces (State.hand st)
 
-            // remove the force print when you move on from manual input (or when you have learnt the format)
-            //forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
-            //let input =  System.Console.ReadLine()
-            //let move = RegEx.parseMove input
+            
+            let w = match isOurTurn st with 
+                    | true -> send cstream (Action.action st)
+                    | false -> ()
 
-            //debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
-            //send cstream (SMPlay move)
-
-            send cstream (Action.action st)
+            w |> ignore 
             let msg = recv cstream
             //debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
 

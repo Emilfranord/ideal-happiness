@@ -58,11 +58,12 @@ let main _ =
     let (dictionary, time) =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
 
-    //let players     = [("PaperScissors", dictionary, PaperScissors.Scrabble.startGame); ("OxyphenButazone", dictionary, Oxyphenbutazone.Scrabble.startGame)]
+    let players     = [ ("PaperScissors", dictionary, PaperScissors.Scrabble.startGame);
+                        ("OxyphenButazone", dictionary, Oxyphenbutazone.Scrabble.startGame);
+                        ("OxyphenButazone Part II", dictionary, Oxyphenbutazone.Scrabble.startGame)
+                        ]
 
-    let players     = [("PaperScissors",dictionary, PaperScissors.Scrabble.startGame)]
-
-    //let players = spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 2
+    //let players     = [("PaperScissors",dictionary, PaperScissors.Scrabble.startGame)]
 
     do ScrabbleServer.Comm.startGame 
         board dictionary handSize timeout tiles seed port players
