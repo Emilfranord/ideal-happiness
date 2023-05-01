@@ -39,7 +39,6 @@ let main _ =
 
     let words     = readLines "./Scrabble/Dictionaries/English.txt"
     
-
     let handSize   = 7u
     let timeout    = None
     let tiles      = ScrabbleUtil.English.tiles 1u

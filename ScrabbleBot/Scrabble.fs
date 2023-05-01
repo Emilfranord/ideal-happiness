@@ -84,7 +84,7 @@ module internal Action =
                     |> List.collect id
 
         let paths = (List.map (fun tile -> stepChar tile prefixDict) hand') |> List.choose id
-
+        
         let finishedPaths = List.filter (fun (wordDone,_ ,_) -> wordDone = true) paths 
                             |> List.map (fun (_,_,(tile)) -> prefixWord @ (List.singleton tile))
 
@@ -109,9 +109,7 @@ module internal Action =
         (List.map (fun x -> List.fold (fun acc (_, (_, point)) -> acc+point) 0 x ) options, options) 
         ||> List.map2 (fun points lst -> (points, lst))
         |> List.sortByDescending (fun (points, _) -> points)
-        |> List.map (fun (_, lst) -> lst)
         |> List.head
-
 
     type Direction = Right | Down
 
@@ -123,29 +121,120 @@ module internal Action =
     let addCoords origin tiles dir = 
         List.mapi (fun iteratror item  -> (increaseCoord iteratror origin dir, item)) tiles
 
-
     let startHooks st = 
-        let coordStartsWord st coord =
-            let tileRight = Map.tryFind (increaseCoord -1 coord Right) (State.placedTiles st)
-            let tileDown = Map.tryFind (increaseCoord -1 coord Down) (State.placedTiles st)
+        let coordStartsWord st (coord: (int * int)) =
+            let tiles = State.placedTiles st
+            // 1 2 3 
+            // 4 5 6 
+            // 7 8 9 
             
-            match (tileRight, tileDown) with
-            | (None, None) -> [Right; Down]
-            | (_, None) -> [Down] 
-            | (None,  _) -> [Right]
-            | (_,  _) -> []
+            let two     = Map.tryFind ((coord |> fst),      ((coord |> snd)-1)) tiles
+            let three   = Map.tryFind ((coord |> fst)+1,    (coord |> snd)-1) tiles
+            let four    = Map.tryFind ((coord |> fst)-1,    (coord |> snd)) tiles
+            
+            let six     = Map.tryFind ((coord |> fst)+1,    (coord |> snd)) tiles
+            let seven   = Map.tryFind ((coord |> fst)-1,    (coord |> snd)+1) tiles
+            let eight   = Map.tryFind ((coord |> fst),      (coord |> snd)+1) tiles
+            let nine    = Map.tryFind ((coord |> fst)+1,    (coord |> snd)+1) tiles
+
+            let rightAvailable = [four;nine;six;three] |> List.forall Option.isNone
+            let downAvailable = [two;seven;eight;nine] |> List.forall Option.isNone
+            
+            let dirRight = 
+                match rightAvailable with
+                | true -> [Right]
+                | false -> []
+
+            let dirDown =
+                match downAvailable with
+                | true -> [Down]
+                | false -> []
+
+            dirRight @ dirDown
+            
+            
 
         State.placedTiles st
             |> Map.map (fun key _ -> coordStartsWord st key) 
             |> Map.filter (fun _ value -> not (List.isEmpty value) )
+
+    let findPrefix st coord dir = 
+        let rec aux st coord dir prefix = 
+            let boardTiles = State.placedTiles st
+
+            let current = Map.tryFind coord boardTiles
+            let next = Map.tryFind (increaseCoord 1 coord dir) boardTiles
+
+            let current' = match current with
+                            | None -> failwith "findPrefix given a invalid coord for current"
+                            | Some ch -> ch
+
+            let prefix' = match prefix with
+                            | [] -> [current']
+                            | _ -> prefix
+
+            match next with
+            | None -> prefix'
+            | Some ch -> aux st (increaseCoord 1 coord dir) dir (prefix' @ (List.singleton ch))
         
+        (aux st coord dir List.empty, dir, coord)
+
+
+    let emptyPlaces st coord dir start ending = 
+        let search = (seq {start+1 .. ending+1}) |> List.ofSeq
+
+        let w = match dir with
+                | Down ->   let directFollows = List.map (fun x -> increaseCoord x coord dir ) search
+                            let right = List.map (fun x -> increaseCoord x (increaseCoord 1 coord Right) dir ) search
+                            let left  = List.map (fun x -> increaseCoord  x (increaseCoord -1 coord Right) dir ) search
+                            directFollows @ right @ left
+                        
+                | Right ->  let directFollows = List.map (fun x -> increaseCoord x coord dir ) search
+                            let up = List.map (fun x -> increaseCoord  x (increaseCoord 1 coord Down) dir ) search
+                            let down  = List.map (fun x -> increaseCoord x (increaseCoord -1 coord Down) dir ) search
+                            directFollows @ up @ down
+        List.map (fun x -> Map.tryFind x (State.placedTiles st )) w  
+        |> List.forall Option.isNone
+        
+    let constructMove st hand = 
+        let cartesian xs ys = 
+            xs |> List.collect (fun x -> ys |> List.map (fun y -> x, y))
+
+        let moves = (startHooks st)
+                    |> Map.toList
+                    |> List.map (fun (coord, dir) -> cartesian (List.singleton coord) dir) 
+                    |> List.collect id
+                    |> List.map (fun (coord, dir) -> findPrefix st coord dir)
+                    |> List.map (fun (chars, dir, coord) -> (chars, dir, coord, chars |> List.length))
+                    |> List.map (fun (prefix, dir, coord, length) -> (listWordsGivenPrefix st prefix hand , dir, coord, length))
+                    |> List.map (fun (words, dir, coord, prefixLength) ->  (List.filter (fun x -> emptyPlaces st coord dir prefixLength (x |> List.length)) words, dir, coord, prefixLength))
+                    |> List.filter (fun (words, _, _, _) -> not (List.isEmpty words))
+                    |> List.map (fun (x, dir, coord, length) -> (x |> selector , dir, coord, length))
+        
+        match moves with
+        | [] -> SMPass
+        | a ->  a
+                |> List.maxBy (fun ((points, _), _, _ ,_ ) ->  points )
+                |> fun ((_, tiles), dir, startCoord, prefixLen ) ->  (addCoords startCoord tiles dir)[prefixLen ..]
+                |> SMPlay
+
+    let firstMove st hand origin = 
+        let possibleWords = listWords st List.empty (State.dict st) hand    
+        
+        
+        match possibleWords with
+        | [] -> SMPass
+        | a ->  a
+                |> selector 
+                |> fun (_, tiles) -> tiles
+                |> fun tiles -> addCoords origin tiles Right
+                |> SMPlay
 
     let action (st : State.state) = 
-        //TODO: make function that takes a start coordinate and a direction, and produces a (coord x tile) list
-        //REMARK: We only need to place new tiles. So if ROCK is on the table, and we want to upgrade it to ROCKET, we only place ET.
-        //TODO: make action use wordfinder, and board scanning
-        
-        SMPass
+        match Map.tryFind (0,0) (State.placedTiles st) with
+        | None -> firstMove st (State.hand st) (0,0) 
+        | Some _ -> constructMove st (State.hand st)
+
 
 module Scrabble =
     open System.Threading
